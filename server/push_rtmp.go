@@ -2,36 +2,61 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
-	"sync"
 	"time"
 )
 
 // CommandStatus 用于封装命令执行的状态
 type CommandStatus struct {
-	cmd       *exec.Cmd
-	Running   bool
-	Success   bool
-	Timestamp time.Time
+	cmd          *exec.Cmd
+	Running      bool
+	Success      bool
+	Timestamp    time.Time
+	transmitInfo *TransmitInfo
 }
 
-func NewPushRtmp(remoteAddr string) *CommandStatus {
+func NewPushRtmp(sysAddr, userAddr string) *CommandStatus {
 	cmd := exec.Command("ffmpeg",
 		"-f", "h264",
 		"-i", "udp://127.0.0.1:65515",
 		"-vcodec", "copy",
 		"-an", // 这个参数用于禁用音频
 		"-f", "flv",
-		remoteAddr)
+		sysAddr,
+		"-vcodec", "copy",
+		"-an", // 这个参数用于禁用音频
+		"-f", "flv",
+		userAddr)
+	transmit := NewTransmit("udp://127.0.0.1:65515")
+	log.Printf("直播推流[ 双 ]路转发启动sysAddr: %s; userAddr: %s \n", sysAddr, userAddr)
 	// 定义ffmpeg命令
 	return &CommandStatus{
-		cmd:     cmd,
-		Running: false,
+		cmd:          cmd,
+		Running:      false,
+		transmitInfo: transmit,
 	}
 }
 
-func (c *CommandStatus) PushRtmp(group *sync.WaitGroup, done chan CommandStatus) {
-	defer group.Done()
+func NewOnePushRtmp(addr string) *CommandStatus {
+	cmd := exec.Command("ffmpeg",
+		"-f", "h264",
+		"-i", "udp://127.0.0.1:65515",
+		"-vcodec", "copy",
+		"-an", // 这个参数用于禁用音频
+		"-f", "flv",
+		addr)
+	transmit := NewTransmit("udp://127.0.0.1:65515")
+	log.Printf("直播推流[ 单 ]路转发启动addr: %s; \n", addr)
+	// 定义ffmpeg命令
+	return &CommandStatus{
+		cmd:          cmd,
+		Running:      false,
+		transmitInfo: transmit,
+	}
+}
+
+func (c *CommandStatus) PushRtmp(done chan CommandStatus) {
 	// 输出命令详情（可选）
 	fmt.Printf("Executing command: %s\n", c.cmd.String())
 	// 启动命令
@@ -46,6 +71,10 @@ func (c *CommandStatus) PushRtmp(group *sync.WaitGroup, done chan CommandStatus)
 		done <- CommandStatus{Running: true, Success: false, Timestamp: time.Now()}
 		return
 	}
-	// 如果命令成功完成
-	done <- CommandStatus{Running: true, Success: true, Timestamp: time.Now()}
+	select {
+	// 如果命令成功完成或者终止发出终止信息
+	case done <- CommandStatus{Running: true, Success: true, Timestamp: time.Now()}:
+
+	}
+
 }

@@ -2,10 +2,11 @@
 push:
   cloud_address: ""
   is_cloud_storage: "0"
-  is_cloud_live: "1"
-  distribution_setting: false
-  cloud_live_mode: "0"
+  is_cloud_live: "0"
+  distribution_setting: true
+  cloud_live_mode: "1"
   with: 1920
   height: 1080
   fps: 30
-  input_src: "rtmp://172.16.100.14:1935/live/test20240821"
+  input_src: "127.0.0.1:65505"
+#  input_src: "rtmp://172.16.100.14:1935/live/test20240821"
