@@ -31,6 +31,7 @@ func NewQueue() *Queue {
 		StatusChan: make(chan string),      // 状态通知通道
 		queue:      list.New(),
 	}
+	atomic.StoreInt32(&q.status, Active)
 	c := cron.New()
 	if err := c.AddFunc("@every 20s", func() {
 		q.mu.Lock()

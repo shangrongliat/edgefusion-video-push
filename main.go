@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"edgefusion-video-push/config"
@@ -14,6 +15,8 @@ import (
 )
 
 func main() {
+	initLog(true)
+	// 设置 log 包的日志输出
 	group := sync.WaitGroup{}
 	group.Add(1)
 	defer group.Done()
@@ -28,55 +31,38 @@ func main() {
 		log.Fatalf("Error unmarshalling YAML data: %v", err)
 	}
 	queue := service.NewQueue()
-
-	var transmit *server.TransmitInfo
-	var push *server.CommandStatus
-	var sysPush, userPush string
-	if cfg.Push.IsCloudLive == "1" || cfg.Push.IsCloudStorage == "1" {
-		path := GetRtmpPutPath(cfg)
-		sysPush = path
-	}
-	if cfg.Push.DistributionSetting {
-		switch cfg.Push.CloudLiveMode {
-		case "0":
-			if sysPush != "" {
-				userPush = cfg.Push.InputSrc
-			} else {
-				sysPush = cfg.Push.InputSrc
-			}
-			log.Printf("视频[ 直播推流rtmp ] 启动")
-		case "1":
-			transmit = server.NewTransmit(cfg.Push.InputSrc)
-			log.Printf("视频[ 透传转发 ] 启动: %v", transmit.RemoteAddr)
-		default:
-			log.Printf("错误的启动类型")
-		}
-	}
-	if sysPush != "" && userPush != "" {
-		push = server.NewPushRtmp(sysPush, userPush)
-	} else if sysPush != "" {
-		push = server.NewOnePushRtmp(sysPush)
-	}
 	lister := server.NewLister()
 	//启动数据接收
 	go lister.Lister(queue)
-	go server.Consume(lister, queue, transmit, push)
+	go server.Consume(lister, queue, cfg)
 
 	group.Wait()
 }
 
-func GetRtmpPutPath(cfg config.Config) string {
-	//节点id
-	NodeId := os.Getenv("EF_NODE_ID")
-	//所属应用名称
-	AppName := os.Getenv("EF_APP_NAME")
-	//服务名称
-	ServiceName := os.Getenv("EF_SERVICE_NAME")
-	if cfg.Push.IsCloudStorage == "1" {
-		//拼接带录播的直播地址
-		return fmt.Sprintf("rtmp://%s:1935/%s-%s/%s?vhost=edgefusiondvr", cfg.Push.CloudAddress, NodeId, AppName, ServiceName)
-	} else {
-		//拼接不录播的直播地址
-		return fmt.Sprintf("rtmp://%s:1935/%s-%s/%s?vhost=edgefusion", cfg.Push.CloudAddress, NodeId, AppName, ServiceName)
+func initLog(terminal bool) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Error getting current working directory: %v", err)
+	}
+	// 构建日志文件的完整路径
+	logFilePath := filepath.Join(cwd, "logs", "app.log")
+	// 创建文件夹 "logs" 如果它不存在
+	err = os.MkdirAll(filepath.Dir(logFilePath), 0755)
+	if err != nil {
+		log.Fatalf("Error creating logs folder: %v", err)
+	}
+	// 打开一个文件用于写入日志
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatalf("Error opening file: %v", err)
+	}
+	// 设置 log 包的日志输出
+	log.SetOutput(logFile)
+	if terminal {
+		// 创建一个 io.MultiWriter 实例，它允许我们将日志输出到多个地方
+		multiWriter := io.MultiWriter(os.Stdout, logFile)
+
+		// 设置 log 包的日志输出
+		log.SetOutput(multiWriter)
 	}
 }

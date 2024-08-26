@@ -8,17 +8,13 @@ import (
 	"net"
 )
 
-type TransmitInfo struct {
-	RemoteAddr *net.UDPAddr
-}
-
 type Listener struct {
 	conn net.PacketConn
 }
 
 func NewLister() *Listener {
 	log.Printf("数据接收者实例化")
-	return &Listener{conn: communication.NewTransient("127.0.0.1:65515")}
+	return &Listener{conn: communication.NewTransient("0.0.0.0:65505")}
 }
 
 func (l *Listener) Lister(queue *service.Queue) {
@@ -40,16 +36,14 @@ func (l *Listener) Lister(queue *service.Queue) {
 	}
 }
 
-func NewTransmit(remoteAddr string) *TransmitInfo {
+func NewTransmit(remoteAddr string) (*net.UDPAddr, error) {
 	remote, err := net.ResolveUDPAddr("udp", remoteAddr)
 	if err != nil {
 		fmt.Println("Error resolving UDP address:", err)
-		return nil
+		return nil, err
 	}
 	log.Println("UDP转发客户端初始化", remote)
-	return &TransmitInfo{
-		RemoteAddr: remote,
-	}
+	return remote, nil
 }
 
 func (t *Listener) Transmit(data []byte, remoteAddrs ...*net.UDPAddr) {
