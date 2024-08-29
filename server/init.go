@@ -1,18 +1,23 @@
 package server
 
 import (
-	"edgefusion-video-push/config"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"time"
+
+	"edgefusion-video-push/config"
 )
 
 func PushInit(cfg config.Config) (transmit, localTransmit *net.UDPAddr, push *CommandStatus) {
 	var sysPush, userPush string
 	var err error
-	if cfg.Push.IsCloudLive == "1" || cfg.Push.IsCloudStorage == "1" {
-		path := GetRtmpPutPath(cfg)
+	if cfg.Push.IsCloudLive || cfg.Push.IsCloudStorage {
+		localTransmit, _ = NewTransmit("127.0.0.1:65525")
+		path := GetRtmpPutPath(&cfg)
 		sysPush = path
 	}
 	if cfg.Push.DistributionSetting {
@@ -35,6 +40,8 @@ func PushInit(cfg config.Config) (transmit, localTransmit *net.UDPAddr, push *Co
 			log.Println("错误的启动类型")
 		}
 	}
+	log.Printf("系统直播地址:%s", sysPush)
+	log.Printf("用户直播地址:%s", userPush)
 	if sysPush != "" && userPush != "" {
 		push, err = NewPushRtmp(sysPush, userPush)
 		if err != nil {
@@ -52,8 +59,8 @@ func PushInit(cfg config.Config) (transmit, localTransmit *net.UDPAddr, push *Co
 func RetryPush(cfg config.Config) (push *CommandStatus) {
 	var sysPush, userPush string
 	var err error
-	if cfg.Push.IsCloudLive == "1" || cfg.Push.IsCloudStorage == "1" {
-		path := GetRtmpPutPath(cfg)
+	if cfg.Push.IsCloudLive || cfg.Push.IsCloudStorage {
+		path := GetRtmpPutPath(&cfg)
 		sysPush = path
 	}
 	if cfg.Push.DistributionSetting {
@@ -83,18 +90,37 @@ func RetryPush(cfg config.Config) (push *CommandStatus) {
 	return
 }
 
-func GetRtmpPutPath(cfg config.Config) string {
+func GetRtmpPutPath(cfg *config.Config) string {
 	//节点id
 	NodeId := os.Getenv("EF_NODE_ID")
+	if NodeId == "" {
+		NodeId = "test"
+	}
 	//所属应用名称
 	AppName := os.Getenv("EF_APP_NAME")
+	if AppName == "" {
+		AppName = fmt.Sprintf("%v", time.Now().Unix())
+	}
 	//服务名称
-	ServiceName := os.Getenv("EF_SERVICE_NAME")
-	if cfg.Push.IsCloudStorage == "1" {
+	streamStr := fmt.Sprintf("%sn%sn%s", cfg.Push.With, cfg.Push.Height, cfg.Push.Fps)
+	log.Printf("分辨率: with: %s hight: %s fps: %s", streamStr, cfg.Push.Height, cfg.Push.Fps)
+	stream, err := base64ToHex(streamStr)
+	if err != nil {
+		log.Printf("stream序列化失敗", err)
+	}
+	if cfg.Push.IsCloudStorage {
 		//拼接带录播的直播地址
-		return fmt.Sprintf("rtmp://%s:1935/%s-%s/%s?vhost=edgefusiondvr", cfg.Push.CloudAddress, NodeId, AppName, ServiceName)
+		return fmt.Sprintf("rtmp://%s:1935/%s-%s/%s?vhost=edgefusiondvr", cfg.Push.CloudAddress, NodeId, AppName, stream)
 	} else {
 		//拼接不录播的直播地址
-		return fmt.Sprintf("rtmp://%s:1935/%s-%s/%s?vhost=edgefusion", cfg.Push.CloudAddress, NodeId, AppName, ServiceName)
+		return fmt.Sprintf("rtmp://%s:1935/%s-%s/%s?vhost=edgefusion", cfg.Push.CloudAddress, NodeId, AppName, stream)
 	}
+}
+
+func base64ToHex(s string) (string, error) {
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }

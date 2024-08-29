@@ -1,11 +1,13 @@
 package server
 
 import (
+	"log"
+	"net"
+	"os"
+
 	"edgefusion-video-push/config"
 	"edgefusion-video-push/service"
 	"github.com/robfig/cron"
-	"log"
-	"net"
 )
 
 var distPush *CommandStatus
@@ -14,12 +16,16 @@ var distPush *CommandStatus
 func Consume(listen *Listener, queue *service.Queue, cfg config.Config) {
 	transmit, localTransmit, push := PushInit(cfg)
 	done := make(chan CommandStatus)
-	var addrs []*net.UDPAddr
+	var transmitAddr, localTransmitAddr *net.UDPAddr
 	if transmit != nil {
-		addrs = append(addrs, transmit)
+		transmitAddr = transmit
+	}
+	file, err := os.Create("/home/edgefusion-video-push/11111.h264")
+	if err != nil {
+		panic(err)
 	}
 	if push != nil {
-		addrs = append(addrs, localTransmit)
+		localTransmitAddr = localTransmit
 		distPush = push
 		// 默认进方法先执行一次
 		go func() {
@@ -32,8 +38,8 @@ func Consume(listen *Listener, queue *service.Queue, cfg config.Config) {
 			// running为ture说明command执行结束，需要重新开始
 			log.Printf("push 状态: %v,队列状态: %v", distPush.Running, queue.Status())
 			if distPush.Running && queue.Status() == 0 {
-				retryPush := RetryPush(cfg)
-				if err := retryPush.PushRtmp(done); err != nil {
+				distPush = RetryPush(cfg)
+				if err := distPush.PushRtmp(done); err != nil {
 					log.Println("推流命令启动执行失败.", err)
 				}
 			}
@@ -52,10 +58,12 @@ func Consume(listen *Listener, queue *service.Queue, cfg config.Config) {
 			}
 		}()
 	}
-	pushExc(listen, queue, addrs)
+	log.Printf("本地推流udp监听地址端口:%v", localTransmitAddr)
+	log.Printf("转发推流udp监听地址端口:%v", transmitAddr)
+	pushExc(listen, queue, file, transmitAddr, localTransmitAddr)
 }
 
-func pushExc(listen *Listener, queue *service.Queue, addr []*net.UDPAddr) {
+func pushExc(listen *Listener, queue *service.Queue, file *os.File, transmitAddr, localTransmitAddr *net.UDPAddr) {
 	for {
 		select {
 		case <-queue.DataChan:
@@ -64,8 +72,8 @@ func pushExc(listen *Listener, queue *service.Queue, addr []*net.UDPAddr) {
 				if video, ok := data.([]byte); ok {
 					//如果取数据成功
 					//根据配置启动分发策略
-					listen.Transmit(video, addr...)
-
+					listen.Live(video, file, localTransmitAddr)
+					go listen.Transmit(video, transmitAddr)
 				}
 			}
 		}

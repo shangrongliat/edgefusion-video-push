@@ -2,18 +2,18 @@ package service
 
 import (
 	"container/list"
-	"github.com/robfig/cron"
 	"log"
 	"sync"
 	"sync/atomic"
-	"time"
+
+	"github.com/robfig/cron"
 )
 
 // Queue 结构体定义了一个线程安全的队列，并增加了一个用于通知的channel
 type Queue struct {
 	mu         sync.Mutex
 	queue      *list.List
-	timer      *time.Timer
+	ItemChan   chan interface{}
 	DataChan   chan interface{}
 	StatusChan chan string // 状态通知通道
 	status     int32       // 0 - Active, 1 - Idle
@@ -26,12 +26,12 @@ const (
 
 // NewQueue 创建一个新的队列实例，并初始化itemChan
 func NewQueue() *Queue {
-	q := &Queue{
-		DataChan:   make(chan interface{}), // 数据通道的缓冲区大小
-		StatusChan: make(chan string),      // 状态通知通道
+	q := Queue{
+		ItemChan:   make(chan interface{}, 2000),
+		DataChan:   make(chan interface{}, 2), // 数据通道的缓冲区大小
+		StatusChan: make(chan string),         // 状态通知通道
 		queue:      list.New(),
 	}
-	atomic.StoreInt32(&q.status, Active)
 	c := cron.New()
 	if err := c.AddFunc("@every 20s", func() {
 		q.mu.Lock()
@@ -44,9 +44,12 @@ func NewQueue() *Queue {
 		log.Println("定时队列状态监测启动失败....", err)
 		return nil
 	}
+
+	atomic.StoreInt32(&q.status, Active)
 	go q.listenForData()
 	c.Start()
-	return q
+	log.Println("队列初始化成功....")
+	return &q
 }
 
 func (q *Queue) listenForData() {
@@ -63,15 +66,20 @@ func (q *Queue) listenForData() {
 				atomic.StoreInt32(&q.status, Idle)
 			}
 			log.Println("定时队列活跃状态监测2:", q.status)
+		case item, ok := <-q.ItemChan:
+			if !ok {
+				return
+			}
+			q.mu.Lock()
+			q.queue.PushBack(item)
+			q.mu.Unlock()
 		}
 	}
 }
 
 // Put 向队列中添加一个元素，并通过channel发送信号
 func (q *Queue) Put(data interface{}) {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-	q.queue.PushBack(data)
+	q.ItemChan <- data
 	if q.status == Idle {
 		q.StatusChan <- "Active" // 通知状态变为 Active
 	}
@@ -80,6 +88,8 @@ func (q *Queue) Put(data interface{}) {
 
 // Pull 从队列中取出一个元素并移除
 func (q *Queue) Pull() (interface{}, bool) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 	if element := q.queue.Front(); element != nil {
 		q.queue.Remove(element)
 		return element.Value, true

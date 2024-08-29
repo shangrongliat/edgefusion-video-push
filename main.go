@@ -6,7 +6,9 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
+	"time"
 
 	"edgefusion-video-push/config"
 	"edgefusion-video-push/server"
@@ -15,13 +17,15 @@ import (
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU() / 2)
+	group := sync.WaitGroup{}
 	initLog(true)
 	// 设置 log 包的日志输出
-	group := sync.WaitGroup{}
 	group.Add(1)
 	defer group.Done()
 	// 加载配置文件
-	yamlFile, err := ioutil.ReadFile("etc/conf.yml")
+	//yamlFile, err := ioutil.ReadFile("./config.yml")
+	yamlFile, err := ioutil.ReadFile("./config.yml")
 	if err != nil {
 		log.Fatalf("Error reading YAML file: %v", err)
 	}
@@ -31,23 +35,23 @@ func main() {
 		log.Fatalf("Error unmarshalling YAML data: %v", err)
 	}
 	queue := service.NewQueue()
+
 	lister := server.NewLister()
+	time.Sleep(1 * time.Millisecond)
 	//启动数据接收
 	go lister.Lister(queue)
+
 	go server.Consume(lister, queue, cfg)
 
 	group.Wait()
 }
 
 func initLog(terminal bool) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatalf("Error getting current working directory: %v", err)
-	}
 	// 构建日志文件的完整路径
-	logFilePath := filepath.Join(cwd, "logs", "app.log")
+	logFilePath := filepath.Join("/etc/edgefusion/video/push/", "logs", "app.log")
+	//logFilePath := filepath.Join("D:\\go-project\\edgefusion\\edgefusion-video-push", "logs", "app.log")
 	// 创建文件夹 "logs" 如果它不存在
-	err = os.MkdirAll(filepath.Dir(logFilePath), 0755)
+	err := os.MkdirAll(filepath.Dir(logFilePath), 0755)
 	if err != nil {
 		log.Fatalf("Error creating logs folder: %v", err)
 	}
