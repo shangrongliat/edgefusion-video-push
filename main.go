@@ -38,10 +38,15 @@ func main() {
 
 	lister := server.NewLister()
 	time.Sleep(1 * time.Millisecond)
+	forward := server.NewForward()
 	//启动数据接收
-	go lister.Lister(queue)
+	go lister.Lister(queue, forward)
 
-	go server.Consume(lister, queue, cfg)
+	transmit, localTransmit, push := server.PushInit(cfg)
+	forward.SetTransmitAddr(transmit, 1)
+	forward.SetTransmitAddr(localTransmit, 2)
+
+	go server.Consume2(push, queue, cfg)
 
 	group.Wait()
 }

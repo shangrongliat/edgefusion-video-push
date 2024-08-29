@@ -31,7 +31,7 @@ func PushInit(cfg config.Config) (transmit, localTransmit *net.UDPAddr, push *Co
 			localTransmit, _ = NewTransmit("127.0.0.1:65525")
 			log.Printf("视频[ 直播推流rtmp ] 启动,系统推流地址：%s ,用户推流地址: %s \n", sysPush, userPush)
 		case "1":
-			transmit, err := NewTransmit(cfg.Push.InputSrc)
+			transmit, err = NewTransmit(cfg.Push.InputSrc)
 			if err != nil {
 				log.Printf("视频[ 透传转发 ] 启动失败,转发地址: %s \n", cfg.Push.InputSrc)
 			}

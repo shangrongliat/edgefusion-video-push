@@ -1,45 +1,36 @@
 package server
 
 import (
+	"edgefusion-video-push/service"
 	"fmt"
 	"log"
 	"net"
-	"os"
-
-	"edgefusion-video-push/communication"
-	"edgefusion-video-push/service"
 )
 
 type Listener struct {
-	conn net.PacketConn
 }
 
 func NewLister() *Listener {
 	log.Printf("数据接收者实例化")
-	return &Listener{conn: communication.NewTransient("127.0.0.1:65505")}
+	return &Listener{}
 }
 
-func (l *Listener) Lister(queue *service.Queue) {
-	defer func(conn net.PacketConn) {
-		if err := conn.Close(); err != nil {
-			log.Printf("Failed to close from UDP: %v", err)
-		}
-	}(l.conn)
-	file, err := os.Create("/home/edgefusion-video-push/22222222222.h264")
+func (l *Listener) Lister(queue *service.Queue, f *Forward) {
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 65505})
 	if err != nil {
-		panic(err)
+		log.Fatalf("Failed to bind to address %v", err)
 	}
 	buf := make([]byte, 1500)
 	log.Println("数据接收启动。。。。。")
 	for {
-		n, _, err := l.conn.ReadFrom(buf)
+		n, _, err := conn.ReadFrom(buf)
 		if err != nil {
 			log.Printf("Failed to read from UDP: %v", err)
 			continue
 		}
 		// 添加到队列中
-		queue.Put(buf[:n])
-		file.Write(buf[12:n])
+		queue.Put()
+		f.Live(buf[12:n])
 	}
 }
 
@@ -53,19 +44,53 @@ func NewTransmit(remoteAddr string) (*net.UDPAddr, error) {
 	return remote, nil
 }
 
-func (t *Listener) Transmit(data []byte, transmitAddr *net.UDPAddr) {
-	if transmitAddr != nil {
-		if _, err := t.conn.WriteTo(data, transmitAddr); err != nil {
+type Forward struct {
+	conn                            *net.UDPConn
+	transmitAddr, localTransmitAddr *net.UDPAddr
+}
+
+func NewForward() *Forward {
+	transmit, err := NewTransmit("127.0.0.1:65506")
+	if err != nil {
+		fmt.Println("Error creating connection:", err)
+		return nil
+	}
+	// 创建一个 UDP 连接
+	conn, err := net.ListenUDP("udp", transmit)
+	if err != nil {
+		fmt.Println("Error creating connection:", err)
+		return nil
+	}
+	return &Forward{
+		conn: conn,
+	}
+}
+
+func (f *Forward) Transmit(data []byte) {
+	if f.transmitAddr != nil {
+		if _, err := f.conn.WriteTo(data, f.transmitAddr); err != nil {
 			fmt.Println("Error sending UDP packet:", err)
 			return
 		}
 	}
 }
 
-func (t *Listener) Live(data []byte, file *os.File, localTransmitAddr *net.UDPAddr) {
-	if localTransmitAddr != nil {
-		if _, err := file.Write(data[12:]); err != nil {
+func (f *Forward) Live(data []byte) {
+	if f.localTransmitAddr != nil {
+		if _, err := f.conn.WriteTo(data, f.localTransmitAddr); err != nil {
 			fmt.Println("Error sending UDP packet:", err)
+			return
 		}
+	}
+}
+
+func (f *Forward) SetTransmitAddr(transmitAddr *net.UDPAddr, typ int) {
+	if transmitAddr == nil {
+		return
+	}
+	if typ == 1 {
+		f.transmitAddr = transmitAddr
+	} else if typ == 2 {
+		f.localTransmitAddr = transmitAddr
 	}
 }

@@ -1,16 +1,12 @@
 package server
 
 import (
-	"log"
-	"net"
-	"os"
-
 	"edgefusion-video-push/config"
 	"edgefusion-video-push/service"
 	"github.com/robfig/cron"
+	"log"
+	"net"
 )
-
-var distPush *CommandStatus
 
 // 按照传入2个对象进行推流控制，在前置new出要推送的对象，传输进来直接进行转发，不在转发里进行new操作
 func Consume(listen *Listener, queue *service.Queue, cfg config.Config) {
@@ -19,10 +15,6 @@ func Consume(listen *Listener, queue *service.Queue, cfg config.Config) {
 	var transmitAddr, localTransmitAddr *net.UDPAddr
 	if transmit != nil {
 		transmitAddr = transmit
-	}
-	file, err := os.Create("/home/edgefusion-video-push/11111.h264")
-	if err != nil {
-		panic(err)
 	}
 	if push != nil {
 		localTransmitAddr = localTransmit
@@ -60,22 +52,4 @@ func Consume(listen *Listener, queue *service.Queue, cfg config.Config) {
 	}
 	log.Printf("本地推流udp监听地址端口:%v", localTransmitAddr)
 	log.Printf("转发推流udp监听地址端口:%v", transmitAddr)
-	pushExc(listen, queue, file, transmitAddr, localTransmitAddr)
-}
-
-func pushExc(listen *Listener, queue *service.Queue, file *os.File, transmitAddr, localTransmitAddr *net.UDPAddr) {
-	for {
-		select {
-		case <-queue.DataChan:
-			data, ok := queue.Pull()
-			if ok && data != nil {
-				if video, ok := data.([]byte); ok {
-					//如果取数据成功
-					//根据配置启动分发策略
-					listen.Live(video, file, localTransmitAddr)
-					go listen.Transmit(video, transmitAddr)
-				}
-			}
-		}
-	}
 }

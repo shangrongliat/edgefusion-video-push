@@ -54,15 +54,15 @@ func (c *CommandStatus) PushRtmp(done chan CommandStatus) error {
 	// 输出命令详情（可选）
 	log.Printf("Executing command: %s\n", c.cmd.String())
 	// 启动命令
-	err := c.cmd.Start()
-	if err != nil {
+	if err := c.cmd.Start(); err != nil {
 		done <- CommandStatus{Running: true, Success: false, Timestamp: time.Now()}
+		log.Println("推流命令执行失败", err)
 		return err
 	}
 	// 等待命令完成
-	err = c.cmd.Wait()
-	if err != nil {
+	if err := c.cmd.Wait(); err != nil {
 		done <- CommandStatus{Running: true, Success: false, Timestamp: time.Now()}
+		log.Println("推流命令异常中断", err)
 		return err
 	}
 	select {
