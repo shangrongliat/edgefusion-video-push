@@ -1,0 +1,56 @@
+Video:
+  input_src: rtsp://172.16.100.123:554/live/av0
+  udp_ip: ""
+  udp_port: ""
+  src_type: H264
+  src_width: "1920"
+  src_height: "1080"
+  src_fps: "25"
+  src_format: RGB3
+  venc_type: H264
+  venc_with: "1920"
+  venc_height: "1080"
+  venc_fps: "25"
+  venc_bps: "2000"
+  zmq_fps: "1"
+  zmq_frame: ""
+  rtp_ip: ""
+  rtp_port: ""
+  horizontal_flip_status_fliping: ""
+  vertical_flip_status_fliping: ""
+  rotate_status_rotating: ""
+  overlay_status_overlaying: ""
+ZMQ_Frame:
+  ip: 127.0.0.1
+  port: 6666
+  frame_format: RGB3
+  frame_with: "1920"
+  frame_height: "1080"
+Python:
+  model_name: 0832-yolov5s.rknn
+  model_type: 0832-test.txt
+  output_way: "108"
+  model_network: YoloV5
+ZMQCoding:
+  ip: ""
+  port: 0
+storage:
+  cloud: false
+  local: false
+pub:
+  brokerType: user
+  address: tcp://192.168.8.10:9000
+  username: "123"
+  password: "123"
+  topic: skill-ir
+  qos: 1
+video_distribution:
+  is_cloud_storage: false
+  is_cloud_live: true
+  distribution_setting: false
+  cloud_live_mode: "1"
+  with: "1920"
+  height: "1080"
+  fps: "30"
+  input_src: ""
+  cloud_address: 172.16.100.14

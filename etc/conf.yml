@@ -1,0 +1,12 @@
+
+push:
+  cloud_address: ""
+  is_cloud_storage: false
+  is_cloud_live: false
+  distribution_setting: true
+  cloud_live_mode: false
+  with: 1920
+  height: 1080
+  fps: 30
+#  input_src: "127.0.0.1:65515"
+  input_src: "rtmp://172.16.100.14:1935/live/test20240821"
