@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -31,9 +32,10 @@ func PushInit(cfg config.Config) (transmit, localTransmit *net.UDPAddr, push *Co
 			localTransmit, _ = NewTransmit("127.0.0.1:65525")
 			log.Printf("视频[ 直播推流rtmp ] 启动,系统推流地址：%s ,用户推流地址: %s \n", sysPush, userPush)
 		case "1":
-			transmit, err = NewTransmit(cfg.Push.InputSrc)
+			addr := domainResolver(cfg.Push.InputSrc)
+			transmit, err = NewTransmit(fmt.Sprintf("%s:65506", addr))
 			if err != nil {
-				log.Printf("视频[ 透传转发 ] 启动失败,转发地址: %s \n", cfg.Push.InputSrc)
+				log.Printf("视频[ 透传转发 ] 启动失败,转发地址: %s:65506 \n", addr)
 			}
 			log.Printf("视频[ 透传转发 ] 启动: %v \n", transmit)
 		default:
@@ -125,4 +127,33 @@ func GetRtmpPutPath(cfg *config.Config) string {
 
 func base64ToHex(s string) (string, error) {
 	return base64.StdEncoding.EncodeToString([]byte(s)), nil
+}
+
+func domainResolver(domain string) string {
+	// Consul DNS 服务器地址和端口
+	consulDNSServer := "127.0.0.1:8600"
+	// 要解析的域名
+	//domain := "montage01.service.consul"
+	// 创建一个自定义的 DNS 解析器
+	resolver := &net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout:   10 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}
+			return d.Dial("udp", consulDNSServer)
+		},
+	}
+	// 解析域名
+	addrs, err := resolver.LookupHost(context.Background(), domain)
+	if err != nil {
+		fmt.Printf("Error resolving %s: %v\n", domain, err)
+		return ""
+	}
+	// 打印解析结果
+	if len(addrs) == 0 {
+		return ""
+	}
+	return addrs[0]
 }

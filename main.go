@@ -75,21 +75,3 @@ func initLog(terminal bool) {
 		log.SetOutput(multiWriter)
 	}
 }
-
-//func main() {
-//	urls := []string{
-//		"rtmp://192.168.1.110:1913",
-//		"rtmp://192.168.1.110:1913/aaa/",
-//		"rtmp://192.168.1.110:1913/aaa",
-//		"rtmp://192.168.1.110:1913/aaa/vvvv",
-//		"192.168.1.110:1913",
-//		"rtmp://192.168.1.110:1913/aaaa/vaaa?vhost=fajdjflaks",
-//		"rtmp://192.168.1.110:1913/aaaa?vhost=fajdjflaks",
-//		"rtmp://192.168.1.110:1913/?vhost=fajdjflaks",
-//		"192.168.1.110:1913/111/1111?vhost=fajdjflaks",
-//	}
-//	for _, url := range urls {
-//		valid := utils.IsRTMPURLValid(url)
-//		fmt.Printf("推流地址: %s 是否合法: %v \n", url, valid)
-//	}
-//}
