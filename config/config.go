@@ -32,6 +32,7 @@ type Video struct {
 	VencWith   string `json:"venc_with" yaml:"venc_with"`
 	VencHeight string `json:"venc_height" yaml:"venc_height"`
 	VencFps    string `json:"venc_fps" yaml:"venc_fps"`
+	VencType   string `json:"venc_type" yaml:"venc_type"`
 }
 
 type SyncResults struct {

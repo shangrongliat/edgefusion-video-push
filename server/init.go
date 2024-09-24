@@ -110,7 +110,7 @@ func GetRtmpPutPath(cfg *config.Config) string {
 		liveFlag = "1"
 	}
 	//服务名称
-	streamStr := fmt.Sprintf("%s@%s@%s@%s@%s", cfg.Video.VencWith, cfg.Video.VencHeight, cfg.Video.VencFps, cfg.Video.SrcType, liveFlag)
+	streamStr := fmt.Sprintf("%s@%s@%s@%s@%s", cfg.Video.VencWith, cfg.Video.VencHeight, cfg.Video.VencFps, cfg.Video.VencType, liveFlag)
 	log.Printf("分辨率: with: %s hight: %s fps: %s liveFlag: %v", streamStr, cfg.Push.Height, cfg.Push.Fps, liveFlag)
 	stream, err := base64ToHex(streamStr)
 	if err != nil {
