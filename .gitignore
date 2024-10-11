@@ -32,4 +32,4 @@ output
 *logs/*
 build/
 data/
-*.sh
+
