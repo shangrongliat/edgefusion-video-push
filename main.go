@@ -58,7 +58,7 @@ func main() {
 
 func initLog(terminal bool) {
 	// 构建日志文件的完整路径
-	logFilePath := filepath.Join("/etc/edgefusion/video/push/", "logs", "app.log")
+	logFilePath := filepath.Join("./", "logs", "app.log")
 	// 创建文件夹 "logs" 如果它不存在
 	err := os.MkdirAll(filepath.Dir(logFilePath), 0755)
 	if err != nil {

@@ -32,8 +32,8 @@ func (l *Listener) Lister(queue *service.Queue, f *Forward) {
 		}
 		// 添加到队列中
 		queue.Put()
-		f.Live(buf[n:])
 		f.Transmit(buf[n:])
+		//f.Live(buf[n:])
 	}
 }
 
@@ -73,8 +73,12 @@ func NewForward() *Forward {
 func (f *Forward) Transmit(data []byte) {
 	if f.transmitAddr != nil {
 		if _, err := f.conn.WriteTo(data, f.transmitAddr); err != nil {
-			fmt.Println("Error sending UDP packet:", err)
-			return
+			fmt.Println("Error sending remote UDP packet:", err, f.transmitAddr)
+		}
+	}
+	if f.localTransmitAddr != nil {
+		if _, err := f.conn.WriteTo(data, f.localTransmitAddr); err != nil {
+			fmt.Println("Error sending local UDP packet:", err, f.localTransmitAddr)
 		}
 	}
 }
