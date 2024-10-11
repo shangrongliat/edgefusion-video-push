@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"edgefusion-video-push/service"
 )
@@ -31,8 +32,8 @@ func (l *Listener) Lister(queue *service.Queue, f *Forward) {
 		}
 		// 添加到队列中
 		queue.Put()
-		f.Live(buf[12:n])
-		f.Transmit(buf[12:n])
+		f.Live(buf[n:])
+		f.Transmit(buf[n:])
 	}
 }
 
@@ -49,6 +50,7 @@ func NewTransmit(remoteAddr string) (*net.UDPAddr, error) {
 type Forward struct {
 	conn                            *net.UDPConn
 	transmitAddr, localTransmitAddr *net.UDPAddr
+	TransmitAddrIp                  string
 }
 
 func NewForward() *Forward {
@@ -92,6 +94,7 @@ func (f *Forward) SetTransmitAddr(transmitAddr *net.UDPAddr, typ int) {
 	}
 	if typ == 1 {
 		f.transmitAddr = transmitAddr
+		f.TransmitAddrIp = strings.Split(transmitAddr.String(), ":")[0]
 	} else if typ == 2 {
 		f.localTransmitAddr = transmitAddr
 	}

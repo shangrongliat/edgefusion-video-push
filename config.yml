@@ -45,7 +45,7 @@ pub:
   topic: skill-ir
   qos: 1
 video_distribution:
-  is_cloud_storage: false
+  is_cloud_storage: true
   is_cloud_live: true
   distribution_setting: false
   cloud_live_mode: "1"

@@ -32,7 +32,7 @@ func PushInit(cfg config.Config) (transmit, localTransmit *net.UDPAddr, push *Co
 			localTransmit, _ = NewTransmit("127.0.0.1:65525")
 			log.Printf("视频[ 直播推流rtmp ] 启动,系统推流地址：%s ,用户推流地址: %s \n", sysPush, userPush)
 		case "1":
-			addr := domainResolver(cfg.Push.InputSrc)
+			addr := DomainResolver(cfg.Push.InputSrc)
 			transmit, err = NewTransmit(fmt.Sprintf("%s:65506", addr))
 			if err != nil {
 				log.Printf("视频[ 透传转发 ] 启动失败,转发地址: %s:65506 \n", addr)
@@ -116,20 +116,22 @@ func GetRtmpPutPath(cfg *config.Config) string {
 	if err != nil {
 		log.Printf("stream序列化失敗", err)
 	}
-	if cfg.Push.IsCloudStorage {
-		//拼接带录播的直播地址
-		return fmt.Sprintf("rtmp://%s:1935/%s@%s/%s?vhost=edgefusiondvr", cfg.Push.CloudAddress, NodeId, AppName, stream)
-	} else {
-		//拼接不录播的直播地址
-		return fmt.Sprintf("rtmp://%s:1935/%s@%s/%s?vhost=edgefusion", cfg.Push.CloudAddress, NodeId, AppName, stream)
-	}
+	fmt.Println(stream)
+	return fmt.Sprintf("rtmp://%s:1935/live/test?vhost=test", cfg.Push.CloudAddress)
+	//if cfg.Push.IsCloudStorage {
+	//	//拼接带录播的直播地址
+	//	return fmt.Sprintf("rtmp://%s:1935/%s@%s/%s?vhost=edgefusiondvr", cfg.Push.CloudAddress, NodeId, AppName, stream)
+	//} else {
+	//	//拼接不录播的直播地址
+	//	return fmt.Sprintf("rtmp://%s:1935/%s@%s/%s?vhost=edgefusion", cfg.Push.CloudAddress, NodeId, AppName, stream)
+	//}
 }
 
 func base64ToHex(s string) (string, error) {
 	return base64.StdEncoding.EncodeToString([]byte(s)), nil
 }
 
-func domainResolver(domain string) string {
+func DomainResolver(domain string) string {
 	// Consul DNS 服务器地址和端口
 	consulDNSServer := "127.0.0.1:8600"
 	// 要解析的域名

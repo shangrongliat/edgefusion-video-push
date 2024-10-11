@@ -17,7 +17,7 @@ type CommandStatus struct {
 // rtmp://172.16.100.14:1935/app/stream
 func NewPushRtmp(sysAddr, userAddr string) (*CommandStatus, error) {
 	cmd := exec.Command("ffmpeg",
-		"-f", "h264",
+		"-f", "flv",
 		"-i", "udp://127.0.0.1:65525",
 		"-vcodec", "copy",
 		"-an", // 这个参数用于禁用音频
@@ -37,7 +37,7 @@ func NewPushRtmp(sysAddr, userAddr string) (*CommandStatus, error) {
 
 func NewOnePushRtmp(addr string) (*CommandStatus, error) {
 	cmd := exec.Command("ffmpeg",
-		"-f", "h264",
+		"-f", "flv",
 		"-i", "udp://127.0.0.1:65525",
 		"-vcodec", "copy",
 		"-an", // 这个参数用于禁用音频

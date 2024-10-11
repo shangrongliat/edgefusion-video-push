@@ -1,24 +1,21 @@
 package server
 
 import (
+	"log"
+
 	"edgefusion-video-push/config"
 	"edgefusion-video-push/service"
 	"github.com/robfig/cron"
-	"log"
-	"net"
 )
 
-// 按照传入2个对象进行推流控制，在前置new出要推送的对象，传输进来直接进行转发，不在转发里进行new操作
-func Consume(listen *Listener, queue *service.Queue, cfg config.Config) {
-	transmit, localTransmit, push := PushInit(cfg)
+var distPush *CommandStatus
+
+// Consume 按照传入2个对象进行推流控制，在前置new出要推送的对象，传输进来直接进行转发，不在转发里进行new操作
+// 队列只为处理数据是否活跃，来决定是否要拉起ffmpeg
+func Consume(push *CommandStatus, queue *service.Queue, cfg config.Config) {
+	distPush = push
 	done := make(chan CommandStatus)
-	var transmitAddr, localTransmitAddr *net.UDPAddr
-	if transmit != nil {
-		transmitAddr = transmit
-	}
 	if push != nil {
-		localTransmitAddr = localTransmit
-		distPush = push
 		// 默认进方法先执行一次
 		go func() {
 			if err := distPush.PushRtmp(done); err != nil {
@@ -50,6 +47,4 @@ func Consume(listen *Listener, queue *service.Queue, cfg config.Config) {
 			}
 		}()
 	}
-	log.Printf("本地推流udp监听地址端口:%v", localTransmitAddr)
-	log.Printf("转发推流udp监听地址端口:%v", transmitAddr)
 }

@@ -19,7 +19,7 @@ import (
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU() / 2)
 	group := sync.WaitGroup{}
-	initLog(false)
+	initLog(true)
 	// 设置 log 包的日志输出
 	group.Add(1)
 	defer group.Done()
@@ -45,8 +45,14 @@ func main() {
 	forward.SetTransmitAddr(transmit, 1)
 	forward.SetTransmitAddr(localTransmit, 2)
 
-	go server.Consume2(push, queue, cfg)
+	go server.Consume(push, queue, cfg)
 
+	// 判断是否是透传转发模式，如果是，则开启定时域名解析
+	if cfg.Push.DistributionSetting == true && cfg.Push.CloudLiveMode == "1" {
+		analysis := server.NewAnalysis(forward, cfg.Push.InputSrc)
+		go analysis.Start()
+
+	}
 	group.Wait()
 }
 
